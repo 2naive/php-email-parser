@@ -357,11 +357,12 @@ class IMAP
     */
     public static function _error_log($str, $err, $type = 0, $dest = NULL)
     {
+        $err            = is_array($err) ? var_export($err, 1) : $err;
+        
         self::_echo($str . ': ' . $err);
         
-        $backtrace_arr  = debug_backtrace();
         $error_log_str  = $str . ': ' . $err . "\r\n";
-        $error_log_str .= $backtrace_arr[1]['file'] . ':' . $backtrace_arr[1]['line'];
+        $error_log_str .= var_export(debug_backtrace(), 1);
         error_log($error_log_str, self::$log_type, self::$log_dest);
         
         if(self::$die_on_error)

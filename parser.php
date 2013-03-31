@@ -46,7 +46,7 @@
         IMAP::_echo("\t".$message->from);
         IMAP::_echo("\t".$message->to);
         IMAP::_echo("\t".$message->subject);
-        IMAP::_echo($message);
+        #IMAP::_echo($message);
     }
     
     
