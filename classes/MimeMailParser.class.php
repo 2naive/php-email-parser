@@ -438,6 +438,10 @@ class MimeMailParser {
         }
     }
     /**
+     * NO   => text/plain attachments are not added to body
+     * YES  => text/plain attachments are added to body
+     * ONLY => only text/plain attachments are added to body
+     *
      * Encoding fix from: https://code.google.com/p/php-mime-mail-parser/issues/detail?id=20
     */
 	public function getMessageEncoding($type = 'text', $attach = "NO")

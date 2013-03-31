@@ -4,6 +4,8 @@ require_once('MimeMailParser.class.php');
 
 /**
  * class IMAP
+ *
+ * @todo Garbage collector for stored files
  * 
  * @var string $host Mail server hostname
 */
@@ -21,7 +23,9 @@ class IMAP
     protected $retry_n          = 3;
     
     protected $path_tmp         = '/tmp';
-    protected $filename_raw_msg = 'raw.txt';
+    protected $filename_raw_msg = 'message.raw.txt';
+    protected $filename_txt_msg = 'message.txt';
+    protected $filename_html_msg= 'message.html';
     
     private $_connection_string;
     private $_connection_string_s;
@@ -72,7 +76,8 @@ class IMAP
         $this->box      =   ! empty($argv[4]) ? (string) $argv[4] : $this->box;
         $this->epp      =   ! empty($argv[5]) ? (int)    $argv[5] : $this->epp;
         $this->protocol =   ! empty($argv[6]) ?          $argv[6] : $this->protocol;
-        $this->_ssl     =   ($argv[7] == "NOSSL") ? FALSE         : $this->_ssl;
+        if( ! empty($argv[7]))
+            $this->_ssl     =   ($argv[7] == "NOSSL") ? FALSE         : $this->_ssl;
         
         $this->port     =   ( ! $this->_ssl && $this->port == 993) ? NULL : $this->port;
         
@@ -228,8 +233,11 @@ class IMAP
             }
             
             $message_folder  = $user_folder . DIRECTORY_SEPARATOR . $message->id;
-            mkdir($message_folder)
-                    or self::_error_log("Unable create message directory", $message_folder);
+            if( ! file_exists($message_folder))
+            {
+                mkdir($message_folder)
+                        or self::_error_log("Unable create message directory", $message_folder);
+            }
             
             $message_file_tmp= $message_folder . DIRECTORY_SEPARATOR . $this->filename_raw_msg;
             imap_savebody($this->_connection, $message_file_tmp, $i)
@@ -248,12 +256,37 @@ class IMAP
              * TODO: attachment enc?
             */
             $message->headers       = $Parser->getHeaders();
-            $message->to            = iconv_mime_decode($Parser->getHeader('to'), 0, "UTF-8");
-            $message->from          = iconv_mime_decode($Parser->getHeader('from'), 0, "UTF-8");
-            $message->subject       = iconv_mime_decode($Parser->getHeader('subject'), 0, "UTF-8");
-            $message->text          = iconv($Parser->getMessageEncoding('text'), "UTF-8", $Parser->getMessageBody('text'));
-            $message->html          = iconv($Parser->getMessageEncoding('html'), "UTF-8", $Parser->getMessageBody('html'));
             $message->attachments   = $Parser->getAttachments();
+            
+            $message->to        = iconv_mime_decode($Parser->getHeader('to'), 0, "UTF-8");
+            $message->from      = iconv_mime_decode($Parser->getHeader('from'), 0, "UTF-8");
+            $message->subject   = iconv_mime_decode($Parser->getHeader('subject'), 0, "UTF-8");
+            $message->text      = iconv($Parser->getMessageEncoding('text'), "UTF-8", $Parser->getMessageBody('text'));
+            $message->html      = iconv($Parser->getMessageEncoding('html'), "UTF-8", $Parser->getMessageBody('html'));
+            
+            
+            /**
+             * Saving text/html originals
+            */
+            if ($fp = fopen($message_folder . DIRECTORY_SEPARATOR . $this->filename_txt_msg, 'w'))
+            {
+                fwrite($fp, $message->text);
+                fclose($fp);
+            }
+            else
+            {
+                self::_error_log("Unable to save txt message", $message_folder);
+            }
+            
+            if ($fp = fopen($message_folder . DIRECTORY_SEPARATOR . $this->filename_html_msg, 'w'))
+            {
+                fwrite($fp, $message->html);
+                fclose($fp);
+            }
+            else
+            {
+                self::_error_log("Unable to save txt message", $message_folder);
+            }
             
             /**
              * Saving attachments
@@ -261,6 +294,14 @@ class IMAP
             */
             foreach($message->attachments as $k => $attachment)
             {
+                /**
+                 * Fixing encoding
+                */
+                foreach ($attachment as $name => $value)
+                {
+                    $attachment->{$name}   =   iconv_mime_decode($value, 0, "UTF-8");
+                }
+                
                 $_local_file    = $message_folder . DIRECTORY_SEPARATOR . $attachment->filename;
                 if ($fp = fopen($_local_file, 'w'))
                 {
@@ -271,6 +312,10 @@ class IMAP
                     fclose($fp);
                     
                     $message->attachments[$k]->local_file = $_local_file;
+                }
+                else
+                {
+                    self::_error_log("Unable to save attachment {$attachment->filename}", $message_folder);
                 }
             }
             

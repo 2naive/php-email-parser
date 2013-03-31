@@ -1,10 +1,15 @@
 <?php
 
-    require_once(dirname(__FILE__) . DIRECTORY_SEPARATOR . 'classes' . DIRECTORY_SEPARATOR . 'IMAP.class.php');    
+    require_once(dirname(__FILE__) . DIRECTORY_SEPARATOR . 'classes' . DIRECTORY_SEPARATOR . 'IMAP.class.php');
+    
+    define('MESSAGES_DIR', dirname(__FILE__) . DIRECTORY_SEPARATOR . 'data');
     
     /**
-     *
+     * @todo Text file attach bugfix
+     * 
      * @tested on Gmail, Yandex.Mail, others
+     *
+     * @encoding UTF-8
      * 
      * @uses exec, iconv
      * @uses pecl                   http://php.net/manual/en/install.pecl.phpize.php
@@ -26,7 +31,7 @@
      *      wget https://php-mime-mail-parser.googlecode.com/svn/trunk/attachment.class.php
      *      
      * 
-     * @usage php /var/www/mail-forward-transform/worker/parser.php cove.ru pavel_so@cove.ru 125130125212 INBOX 10 imap NOSSL > log.tmp
+     * @usage php parser.php imap.yandex.ru mail@yandex.ru password INBOX 10 imap NOSSL >log.txt 2>log.txt
     */
     
     /**
@@ -36,24 +41,14 @@
     */
     function _callback($message)
     {
-        /**
-         * Saving messages (txt, html)
-         * Just for test
-         * Remember escaping ' char
-        */
-        //$_path_export           = $folder_user . DIRECTORY_SEPARATOR . $message->id;
-        //exec("echo '{$message->text}' > '{$_path_export}.txt'");
-        //exec("echo '{$message->html}' > '{$_path_export}.html'");
-        
         IMAP::_echo($message->id);
         IMAP::_echo("\t".$message->date);
         IMAP::_echo("\t".$message->from);
         IMAP::_echo("\t".$message->to);
         IMAP::_echo("\t".$message->subject);
-        //IMAP::_echo($message);
+        IMAP::_echo($message);
     }
     
-
     
     /**
      * Echo time
@@ -115,7 +110,7 @@
         
         if(is_array($emails))
         {
-            $messages = $IMAP->parseMessages($emails, 10, dirname(__FILE__));
+            $messages = $IMAP->parseMessages($emails, 10, MESSAGES_DIR);
         }
         else
         {
