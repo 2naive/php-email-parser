@@ -3,14 +3,16 @@
 /**
  * Multithread parser runner
  * 
- * @usage php nohup run.php 5 &
+ * @uses pcntl_fork, nohup, exec
+ * 
+ * @usage nohup php run.php 5 &
 */
 
 /**
  * Defining constants
 */
 DEFINE('MEMORY_LIMIT',  10 * 1024 /*10 MB*/);
-DEFINE('TIME_LIMIT',    1 * 60 /*2 Min*/);
+DEFINE('TIME_LIMIT',    6 * 60 * 60 /*6 Hours*/);
 DEFINE('LOGS_DIR',      dirname(__FILE__) . DIRECTORY_SEPARATOR . 'logs');
 $time_start = microtime(1);
 
@@ -120,10 +122,15 @@ while(TRUE)
     $time_elapsed   = round($time_now-$time_start,2);
     #echo 'Time elapsed: ' . $time_elapsed . '/' . TIME_LIMIT . PHP_EOL;
     
-    if($memory_usage > MEMORY_LIMIT)
+    if($memory_usage > MEMORY_LIMIT || $time_elapsed > TIME_LIMIT)
     {
         echo 'Memory usage: ' . $memory_usage . '/' . MEMORY_LIMIT . 'KB'. PHP_EOL;
-        echo 'Time elapsed: ' . $time_elapsed . 's' . PHP_EOL;
+        echo 'Time elapsed: ' . $time_elapsed . '/' . TIME_LIMIT . PHP_EOL;
+        
+        exec('nohup php ' . __FILE__ . ' ' . $sleep . '&', $output);
+        echo implode(PHP_EOL, $output) . PHP_EOL;
+        break;
+        exit;
     }
     
     sleep($sleep);
