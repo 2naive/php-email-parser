@@ -20,7 +20,7 @@ class IMAP
     protected $port             = 993;
     protected $protocol         = 'imap';
     protected $box              = 'INBOX';
-    protected $retry_n          = 3;
+    protected $retry_n          = 1;
     
     protected $path_tmp         = '/tmp';
     protected $filename_raw_msg = 'message.raw.txt';
