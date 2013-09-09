@@ -27,6 +27,8 @@ class IMAP
     protected $filename_txt_msg = 'message.txt';
     protected $filename_html_msg= 'message.html';
     
+    protected $imap_status_options = SA_ALL; //SA_UNSEEN; 
+    
     private $_connection_string;
     private $_connection_string_s;
 
@@ -85,7 +87,7 @@ class IMAP
         $this->_connection_string   .= $this->host;
         $this->_connection_string   .= $this->port      ? ':'.$this->port       : '';
         $this->_connection_string   .= $this->protocol  ? '/'.$this->protocol   : '';
-        $this->_connection_string   .= $this->_ssl      ? '/ssl'                : '';
+        $this->_connection_string   .= $this->_ssl      ? '/ssl/novalidate-cert': ''; // fix as option
         $this->_connection_string   .= '}';
         
         $this->_connection_string_s  = $this->_connection_string;
@@ -107,7 +109,7 @@ class IMAP
     /**
      * Establishing connection
     */
-    public function connect($retry_n = 3, $options = NULL)
+    public function connect($retry_n = 1, $options = NULL)
     {
         $this->retry_n  = $retry_n;
         $this->_connection = imap_open($this->_connection_string, $this->email, $this->pwd, $options, $this->retry_n)
@@ -161,8 +163,10 @@ class IMAP
     {
         if($this->is_connected())
         {
-            
-            $this->_mailbox_info = imap_mailboxmsginfo($this->_connection)
+            # imap_mailboxmsginfo is TOO SLOW !!!
+            # http://www.php.net/manual/en/function.imap-mailboxmsginfo.php
+            # going to imap_status
+            $this->_mailbox_info = imap_status($this->_connection, $this->_connection_string, $this->imap_status_options)
                 or self::_error_log('Unable to get mailbox info', imap_last_error());
                 
             return $this->_mailbox_info;
@@ -178,7 +182,13 @@ class IMAP
         if($this->is_connected())
         {
             $emails = imap_search($this->_connection, $criteria);
-            return $emails;
+            
+            if($emails == FALSE)
+            {
+                self::_error_log('Couldn`t search messages', 'Nothing found');
+            }
+            else
+                return $emails;
         }
         else
         {
@@ -201,7 +211,8 @@ class IMAP
             /**
              * Pinging connection
             */
-            $this->is_connected();
+            $this->is_connected()
+                or self::_error_log("Connection lost during $i message read", imap_last_error());
             
             /**
              * Getting headers information
