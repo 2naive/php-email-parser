@@ -369,7 +369,6 @@ class IMAP
     public static function _error_log($str, $err, $type = 0, $dest = NULL)
     {
         $err            = is_array($err) ? var_export($err, 1) : $err;
-        self::$echo_on  = TRUE;
         
         self::_echo('ERROR: ' . $str . ': ' . $err);
         
@@ -378,7 +377,7 @@ class IMAP
         error_log($error_log_str, self::$log_type, self::$log_dest);
         
         if(self::$die_on_error)
-            die();
+            die("\r\n(!) ERROR: $str: $err\r\n");
     }
     
     /**
